@@ -80,7 +80,8 @@ function openJoin(){$('joinDlg').classList.remove('hidden');
     const row=$('ipRow');row.innerHTML='';if(info.urls.length>1){row.appendChild(document.createTextNode('Netzwerk: '));const s=document.createElement('select');s.style.width='auto';info.urls.forEach(u=>s.appendChild(new Option(u,u)));s.onchange=()=>pick(s.value);row.appendChild(s);}}
   else if(!online)showJoin('','','Der Host-Modus im WLAN braucht das EKG-Trainer-Programm auf diesem Computer. In dieser Webansicht funktionieren Auswahl, Bühne, Zeichnen, Messen und Erregungsleitung.');}
 $('btnJoin').onclick=openJoin;$('joinClose').onclick=()=>$('joinDlg').classList.add('hidden');
-try{$('relayUrl').value=localStorage.getItem('ekg.relay')||'';}catch(e){}
+const RELAY_STD='https://ekg-trainer.leitwerk.workers.dev';$('relayUrl').value=RELAY_STD;
+try{$('relayUrl').value=localStorage.getItem('ekg.relay')||RELAY_STD;}catch(e){}
 $('btnOnline').onclick=()=>{let u=$('relayUrl').value.trim().replace(/\/+$/,'');if(!/^https?:\/\//.test(u)){$('onlineState').textContent='Bitte die Adresse des Online-Dienstes eintragen (https://…).';return;}try{localStorage.setItem('ekg.relay',u);}catch(e){}
   if(online){online.net.close();nets.splice(nets.indexOf(online.net),1);}
   const abc='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',rnd=n=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>abc[b%abc.length]).join('');const room=rnd(5),k=rnd(20);

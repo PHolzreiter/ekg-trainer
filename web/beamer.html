@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EKG-Trainer – Beamer</title><link rel="stylesheet" href="app.css">
+<style>body{background:#fff}.stage{flex:1;min-height:0}.wait{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:22px;pointer-events:none}</style></head>
+<body><div class="full">
+  <div class="revealbox hidden" id="reveal"></div>
+  <div class="stage"><div class="paper" id="paper"></div><div class="mon hidden" id="mon"></div>
+    <div class="explain hidden" id="explain"><div class="h3d" id="h3d"></div></div></div>
+</div><div class="wait" id="wait">Warte auf das Steuerpult …</div>
+<script src="vendor/three.min.js"></script><script src="ekg-lib.js"></script><script src="ekg-engine.js"></script>
+<script src="common.js"></script><script src="viewer.js"></script><script src="heart3d.js"></script>
+<script>
+(function(){const {generateECG}=LeitWerkECG,C=EKGCommon,$=id=>document.getElementById(id);
+const paper=new EKGView.EcgPaper($('paper'),{bg:'#fff',empty:''}),monitor=new EKGView.EcgMonitor($('mon'));let ecg=null,heart=null,spec=null,explain=false;
+const bc=new BroadcastChannel('ekg-trainer');
+function show(s){spec=s;$('wait').classList.add('hidden');ecg=generateECG(s.case,s.seed,{variant:s.variant||undefined,clean:s.clean,vector:true});
+  paper.setRecord(C.makeRecord(ecg,s));const live=s.view==='live';$('paper').classList.toggle('hidden',live);$('mon').classList.toggle('hidden',!live);
+  if(live){const g=generateECG(s.case,s.seed,{variant:s.variant||undefined,clean:s.clean,dur:64});monitor.gain=s.gain;monitor.setData(C.liveLoop(g,s.lead,s.filter));}
+  if(explain&&heart)heart.setECG(ecg);}
+function setExplain(on,lead){explain=on;$('explain').classList.toggle('hidden',!on);if(on){if(!heart)heart=new Heart3D($('h3d'));heart.setLead(lead||'II');if(ecg)heart.setECG(ecg);}else paper.setCursor(null);}
+bc.onmessage=e=>{const m=e.data;if(!m)return;
+  if(m.t==='show')show(m.spec);else if(m.t==='ink')paper.setRemote({ink:m.ink,cals:m.cals});else if(m.t==='view')paper.setView(m.v);
+  else if(m.t==='reveal'){const r=m.data;$('reveal').classList.toggle('hidden',!r);if(r)$('reveal').textContent=r.title+' — '+r.device.join(' · ');paper.setReveal(null);}
+  else if(m.t==='explain')setExplain(m.on,m.lead);else if(m.t==='xopt'){if(heart)heart.setOptions(m.o);}
+  else if(m.t==='time'){if(explain&&heart){heart.setTime(m.x);paper.setCursor(m.x);}}else if(m.t==='gain'){monitor.gain=m.gain;}};
+bc.postMessage({t:'hello'});
+document.addEventListener('keydown',e=>{if(e.key==='f'||e.key==='F'){if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{});}});
+})();
+</script></body></html>

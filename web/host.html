@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EKG-Trainer – Steuerpult</title><link rel="stylesheet" href="app.css"></head>
+<body>
+<div class="host">
+  <div class="topbar">
+    <h1>EKG-Trainer</h1><span class="pill" id="pill">Vorschau</span><span class="muted" id="peerCount"></span>
+    <span class="sp"></span>
+    <button class="btn" id="btnJoin">Teilnehmer einladen (QR)</button>
+    <button class="btn" id="btnBeamer">Beamer-Fenster</button>
+    <button class="btn" id="btnPresent" title="Taste H">Nur Bühne zeigen</button>
+  </div>
+  <div class="side">
+    <div class="card"><h2>EKG auswählen</h2>
+      <select id="caseSel"></select><div style="height:8px"></div><select id="varSel"></select>
+      <div class="row"><button class="btn" id="btnNew">Neues EKG</button><button class="btn" id="btnRand">Zufälliger Befund</button></div>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="chkClean"> Ohne Störungen (Artefakte aus)</label>
+      <label class="chk"><input type="checkbox" id="chkVals" checked> Messwerte im Kopf anzeigen</label>
+      <div class="row"><button class="btn on" data-view="paper">Papier</button><button class="btn" data-view="live">Live-Monitor</button></div>
+      <div class="row hidden" id="liveRow"><select id="leadSel"></select><select id="gainSel"><option value="0.5">x0,5</option><option value="1" selected>x1</option><option value="2">x2</option><option value="4">x4</option></select><button class="btn" id="btnBeep">Ton aus</button></div>
+    </div>
+    <div class="card"><h2>An die Gruppe</h2>
+      <button class="btn primary" id="btnSend" style="width:100%">An alle senden</button>
+      <div class="row"><button class="btn warn" id="btnReveal">Auflösen</button><button class="btn" id="btnExplain">Erregungsleitung</button></div>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="chkInk" checked> Meine Zeichnung an alle</label>
+      <label class="chk"><input type="checkbox" id="chkZoom"> Zoom am Beamer mitführen</label>
+    </div>
+    <div class="card"><h2>Lösung (nur hier sichtbar)</h2><div class="sol" id="sol"></div></div>
+  </div>
+  <div class="stage" id="stage">
+    <div class="paper" id="paper"></div>
+    <div class="mon hidden" id="mon"></div>
+    <div class="explain hidden" id="explain">
+      <div class="h3d" id="h3d"></div>
+      <div class="xbar">
+        <button class="btn" id="xPrev">◀ Schlag</button><button class="btn" id="xPlay">Pause</button><button class="btn" id="xNext">Schlag ▶</button>
+        <select id="xSpeed"><option value="1">1×</option><option value="0.5">0,5×</option><option value="0.25" selected>0,25×</option><option value="0.1">0,1×</option></select>
+        <select id="xLead"></select>
+        <label class="chk"><input type="checkbox" id="xVec" checked> Vektor</label><label class="chk"><input type="checkbox" id="xAxis" checked> Ableitung</label>
+      </div>
+    </div>
+  </div>
+</div>
+<button class="btn unpresent" id="btnUnpresent" title="Taste H oder Esc">Steuerung einblenden</button>
+<div class="overlay hidden" id="joinDlg"><div class="dialog">
+  <div class="join"><div id="qr"></div><div style="max-width:420px">
+    <div class="muted">Im selben WLAN mit der Handykamera scannen oder im Browser öffnen:</div>
+    <div class="url" id="joinUrl"></div><div class="muted" style="margin-top:10px">Raumcode</div><div class="code" id="joinCode"></div>
+    <div id="ipRow" style="margin-top:8px"></div><div class="muted" id="joinHint" style="margin-top:8px"></div></div></div>
+  <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+  <div><b>Online-Raum</b> <span class="muted">(für Teilnehmer außerhalb des WLANs)</span>
+    <div class="row"><input id="relayUrl" placeholder="https://… (Adresse des Online-Dienstes)" style="flex:3;border:1px solid var(--line);border-radius:10px;padding:8px 10px"><button class="btn" id="btnOnline">Online-Raum öffnen</button></div>
+    <div class="muted" id="onlineState" style="margin-top:6px"></div></div>
+  <div style="margin-top:14px"><b>Teilnehmer</b> <span id="peerCount2" class="muted"></span><div class="peers" id="peers"></div></div>
+  <div style="text-align:right;margin-top:16px"><button class="btn primary" id="joinClose">Schließen</button></div>
+</div></div>
+<script src="vendor/three.min.js"></script><script src="vendor/qrcode.js"></script>
+<script src="ekg-lib.js"></script><script src="ekg-engine.js"></script>
+<script src="common.js"></script><script src="viewer.js"></script><script src="heart3d.js"></script><script src="host.js"></script>
+</body></html>

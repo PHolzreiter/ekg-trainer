@@ -1,0 +1,17 @@
+# EKG-Trainer – Online-Räume (Cloudflare Workers, Gratis-Tarif)
+# Veröffentlichen:  npx wrangler deploy      (danach die angezeigte https-Adresse im Steuerpult eintragen)
+name = "ekg-trainer"
+main = "src/worker.js"
+compatibility_date = "2025-04-01"
+
+[assets]
+directory = "./public"          # nur die Teilnehmerseite – Generator und Lösungen bleiben beim Host
+binding = "ASSETS"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]

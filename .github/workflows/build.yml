@@ -1,6 +1,8 @@
 name: Build
 on:
   push:
+    branches: [main]
+    paths: ['server/**', 'web/**', 'engine/**']
     tags: ['v*']
   workflow_dispatch:
 jobs:

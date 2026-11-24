@@ -6,6 +6,10 @@ on:
     paths: ['server/**', 'web/**', 'engine/**', '.github/workflows/build.yml']
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release anlegen, z. B. v0.1.0 (leer = nur bauen)'
+        required: false
 jobs:
   windows:
     runs-on: windows-latest
@@ -45,7 +49,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with: {name: EKG-Trainer-Linux, path: EKG-Trainer-Linux.tar.gz}
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.version != ''
     needs: [windows, macos, linux]
     runs-on: ubuntu-latest
     permissions: {contents: write}
@@ -54,4 +58,5 @@ jobs:
         with: {merge-multiple: true, path: dist}
       - env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "EKG-Trainer $GITHUB_REF_NAME" --notes "Testversion. macOS und Windows sind nicht signiert und warnen beim ersten Start."
+          VER: ${{ inputs.version || github.ref_name }}
+        run: gh release create "$VER" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "EKG-Trainer $VER" --notes "Testversion. macOS und Windows sind nicht signiert und warnen beim ersten Start."

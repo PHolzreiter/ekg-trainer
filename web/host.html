@@ -22,22 +22,26 @@
     </div>
     <div class="card"><h2>An die Gruppe</h2>
       <button class="btn primary" id="btnSend" style="width:100%">An alle senden</button>
-      <div class="row"><button class="btn warn" id="btnReveal">Auflösen</button><button class="btn" id="btnExplain">Erregungsleitung</button></div>
+      <div class="row"><button class="btn warn" id="btnReveal">Auflösen</button><button class="btn" id="btnExplain">Erklär-Ansicht</button></div>
       <label class="chk" style="margin-top:8px"><input type="checkbox" id="chkInk" checked> Meine Zeichnung an alle</label>
       <label class="chk"><input type="checkbox" id="chkZoom"> Zoom am Beamer mitführen</label>
+      <label class="chk"><input type="checkbox" id="chkMon"> Monitor-Ableitung bei Teilnehmern</label>
+      <div class="row hidden" id="monRow"><span class="muted">Ableitung</span><select id="monLead" style="width:auto"></select></div>
     </div>
     <div class="card"><h2>Lösung (nur hier sichtbar)</h2><div class="sol" id="sol"></div></div>
   </div>
   <div class="stage" id="stage">
-    <div class="paper" id="paper"></div>
+    <div class="pcol" id="pcol"><div class="paper" id="paper"></div><div class="mon2 hidden" id="mon2"></div></div>
     <div class="mon hidden" id="mon"></div>
     <div class="explain hidden" id="explain">
-      <div class="h3d" id="h3d"></div>
-      <div class="xbar">
+      <div class="xtabs"><button class="xtab on" data-x="erreg">Erregungsleitung</button><button class="xtab" data-x="loc">Infarkt-Lokalisation</button></div>
+      <div class="h3d" id="h3d"></div><div class="locw hidden" id="locw"></div>
+      <div class="xbar hidden" id="xbarL"><label class="chk"><input type="checkbox" id="xMarks" checked> Ableitungen im EKG markieren (auch bei Teilnehmern und am Beamer)</label></div>
+      <div class="xbar" id="xbarE">
         <button class="btn" id="xPrev">◀ Schlag</button><button class="btn" id="xPlay">Pause</button><button class="btn" id="xNext">Schlag ▶</button>
         <select id="xSpeed"><option value="1">1×</option><option value="0.5">0,5×</option><option value="0.25" selected>0,25×</option><option value="0.1">0,1×</option></select>
         <select id="xLead"></select>
-        <label class="chk"><input type="checkbox" id="xVec" checked> Vektor</label><label class="chk"><input type="checkbox" id="xAxis" checked> Ableitung</label>
+        <label class="chk"><input type="checkbox" id="xVec" checked> Vektor</label><label class="chk"><input type="checkbox" id="xAxis" checked> Ableitung</label><label class="chk"><input type="checkbox" id="xLbl" checked> Beschriftung</label>
       </div>
     </div>
   </div>
@@ -57,5 +61,5 @@
 </div></div>
 <script src="vendor/qrcode.js"></script>
 <script src="ekg-lib.js"></script><script src="ekg-engine.js"></script>
-<script src="common.js"></script><script src="viewer.js"></script><script src="heart2d.js"></script><script src="host.js"></script>
+<script src="common.js"></script><script src="viewer.js"></script><script src="heart2d.js"></script><script src="loc2d.js"></script><script src="host.js"></script>
 </body></html>

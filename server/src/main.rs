@@ -86,7 +86,7 @@ async fn files(ConnectInfo(addr): ConnectInfo<SocketAddr>, uri: Uri) -> Response
     let local = addr.ip().is_loopback();
     match p {
         "" | "index.html" => asset("index.html"),
-        "host" | "host.html" | "host.js" | "beamer.html" | "ekg-engine.js" | "ekg-lib.js" | "heart2d.js" | "vendor/three.min.js" if !local => {
+        "host" | "host.html" | "host.js" | "beamer.html" | "ekg-engine.js" | "ekg-lib.js" | "heart2d.js" | "loc2d.js" if !local => {
             // Lösung und Generator bleiben auf dem Host-Computer
             StatusCode::FORBIDDEN.into_response()
         }

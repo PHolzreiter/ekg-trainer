@@ -4,22 +4,24 @@
 <body><div class="full">
   <div class="jbar"><span class="dot" id="dot"></span><span id="status">Verbinde …</span><span style="flex:1"></span><input id="name" placeholder="Dein Name (optional)" maxlength="24"></div>
   <div class="revealbox hidden" id="reveal"></div>
-  <div class="paper" id="paper"></div><div class="mon hidden" id="mon"></div>
+  <div class="paper" id="paper"></div><div class="mon2 hidden" id="mon2"></div><div class="mon hidden" id="mon"></div>
 </div>
 <script src="common.js"></script><script src="viewer.js"></script>
 <script>
 (function(){const C=EKGCommon,$=id=>document.getElementById(id);
-const paper=new EKGView.EcgPaper($('paper'),{empty:'Warte auf das erste EKG …'}),monitor=new EKGView.EcgMonitor($('mon'));
+const paper=new EKGView.EcgPaper($('paper'),{empty:'Warte auf das erste EKG …'}),monitor=new EKGView.EcgMonitor($('mon')),monitor2=new EKGView.EcgMonitor($('mon2'));let monOn=false;
 const q=new URLSearchParams(location.search);let room=(q.get('r')||q.get('room')||'').toUpperCase();
 let name='';try{name=localStorage.getItem('ekg.name')||'';}catch(e){}$('name').value=name;
 function start(){const proto=location.protocol==='https:'?'wss':'ws';const net=new C.Net(`${proto}://${location.host}/ws?role=view&room=${encodeURIComponent(room)}`);
   const hello=()=>net.send({t:'hello',name:$('name').value.trim().slice(0,24)});
   net.on('status',s=>{$('dot').classList.toggle('ok',s==='verbunden');$('status').textContent=s==='verbunden'?'Verbunden':s==='entfernt'?'Du wurdest aus dem Raum entfernt.':s==='abgelehnt'?'Raum nicht gefunden.':'Verbindung unterbrochen – neuer Versuch …';if(s==='verbunden')hello();});
   $('name').onchange=()=>{try{localStorage.setItem('ekg.name',$('name').value);}catch(e){}hello();};
-  net.on('ecg',m=>{const live=m.view==='live'&&m.live;$('paper').classList.toggle('hidden',!!live);$('mon').classList.toggle('hidden',!live);
+  net.on('ecg',m=>{const live=m.view==='live'&&m.live;$('paper').classList.toggle('hidden',!!live);$('mon').classList.toggle('hidden',!live);$('mon2').classList.toggle('hidden',!!live||!monOn);
     paper.setRecord(C.unpack(m.rec));paper.setRemote(null);if(live){monitor.gain=m.gain||1;monitor.setData(C.unpackLive(m.live));}});
   net.on('ink',m=>paper.setRemote({ink:m.ink,cals:m.cals,ruler:m.ruler}));
   net.on('layout',m=>paper.setLayout(m.l,m.page));
+  net.on('marks',m=>paper.setMarks(m.marks));
+  net.on('mon',m=>{monOn=!!(m.on&&m.live);$('mon2').classList.toggle('hidden',!monOn||!$('mon').classList.contains('hidden'));if(monOn){monitor2.gain=m.gain||1;monitor2.setData(C.unpackLive(m.live));monitor2.setInfo('Monitor · '+m.live.lead);}});
   net.on('reveal',m=>{const r=m.data,b=$('reveal');b.classList.toggle('hidden',!r);if(r){b.innerHTML='';const t=document.createElement('b');t.textContent=r.title;b.appendChild(t);const d=document.createElement('div');d.style.fontSize='12px';d.style.opacity='.9';d.textContent=r.teach.join(' ');b.appendChild(d);}});
   net.on('closed',()=>{$('status').textContent='Der Raum wurde geschlossen.';});}
 if(!room){fetch('api/room').then(r=>r.ok?r.json():null).then(j=>{if(j&&j.room){room=j.room;start();}else ask();}).catch(ask);}else start();

@@ -58,7 +58,7 @@ const CASES = {
 normal:{g:'Nicht akut',n:'Unauffällig',v:{alltag:'Alltag (mit Nebenbefunden möglich)',sauber:'Sauber abgeleitet',schlecht:'Schlecht abgeleitet (Artefakte)'},setup(c,v){const{U,chance,P,M,f,noise}=c;
   P.age=Math.round(U(19,84));P.hr=U(50,90);
   if(v!=='sauber'){
-    if(P.age>55&&chance(.22)){P.rotFr=U(-80,-68);f.lahb=1;c.dev.push('V. a. linksanterioren Hemiblock');}
+    if(P.age>55&&chance(.22)){P.rotFr=U(-80,-68);f.lahb=1;M.fasc={laf:1};c.dev.push('V. a. linksanterioren Hemiblock');}
     if(chance(.12)){M.PR=U(.21,.25);f.av1=1;c.dev.push('AV-Block I°');}
     if(chance(.13)){M.rsr=true;f.irsb=1;c.dev.push('Inkompletter Rechtsschenkelblock');}
     if(chance(.4)){M.pvc={first:U(1.5,7.5),gap:[5,16]};f.ves=1;c.dev.push('Ventrikuläre Extrasystole(n)');}
@@ -83,8 +83,8 @@ fruehrepol:{g:'Nicht akut',n:'Frührepolarisation (harmlos)',setup(c){const{U,P,
 alter_infarkt:{g:'Nicht akut',n:'Alter Infarkt (Narbe)',v:{vw:'Vorderwand',hw:'Hinterwand (inferior)'},setup(c,v){const{U,chance,P,M}=c;
   P.age=Math.round(U(58,88));P.hr=U(58,88);
   if(v==='vw'){M.qScale=[.05,.25,1,1];M.qAdd.push({t:.02,s:.009,a:.32,v:[.15,0,-1]});M.tExtra.push({a:U(.08,.16),v:nrm([0,.1,-1])});
-    if(chance(.35)){M.st.push({a:U(.05,.09),v:nrm([.2,0,1])});c.f.aneu=1;}c.dev.push('Q-Zacken V1–V3','Anteriorer Infarkt, alt');}
-  else{M.qScale=[1,.3,.9,1];M.qAdd.push({t:.02,s:.009,a:U(.4,.55),v:[0,-1,0]});M.tExtra.push({a:U(.08,.16),v:nrm([0,1,0]).map(x=>-x)});c.dev.push('Q-Zacken II, III, aVF','Inferiorer Infarkt, alt');}
+    if(chance(.35)){M.st.push({a:U(.05,.09),v:nrm([.2,0,1])});c.f.aneu=1;}c.dev.push('Q-Zacken V1–V3','Anteriorer Infarkt, alt');M.mi={walls:['anterior','septal'],vessel:'LAD',stage:'narbe'};}
+  else{M.qScale=[1,.3,.9,1];M.qAdd.push({t:.02,s:.009,a:U(.4,.55),v:[0,-1,0]});M.tExtra.push({a:U(.08,.16),v:nrm([0,1,0]).map(x=>-x)});c.dev.push('Q-Zacken II, III, aVF','Inferiorer Infarkt, alt');M.mi={walls:['inferior'],vessel:'RCA',stage:'narbe'};}
   c.verdict='Abnormales EKG';
   c.teach.push(v==='vw'?'<b>Alter Vorderwandinfarkt</b>: QS-Komplexe V1–V3, fehlende R-Progression, flache/negative T anterior.':'<b>Alter Hinterwandinfarkt</b>: breite, tiefe Q-Zacken in III und aVF (oft auch II), flache/negative T inferior.',
     c.f.aneu?'Persistierende leichte ST-Hebung: an Aneurysma denken – Vergleich mit Vor-EKG entscheidend.':'Ohne Vor-EKG nicht sicher von einem frischen Infarkt abgrenzbar – Klinik!');}},
@@ -111,7 +111,8 @@ schrittmacher:{g:'Nicht akut',n:'Schrittmacher',v:{vvi:'VVI (Kammer)',ddd:'DDD (
 /* ---------- Leitung ---------- */
 lsb:{g:'Erregungsleitung',n:'Linksschenkelblock',v:{plain:'LSB (bekannt, keine Ischämie)',sg_lat:'LSB + Infarkt lateral (konkordante ST-Hebung)',sg_inf:'LSB + Infarkt inferior (konkordante ST-Hebung)',sg_v13:'LSB + Infarkt posterior (konkordante ST-Senkung V1–V3)',smith:'LSB + Vorderwandinfarkt (exzessiv diskordante ST-Hebung)'},setup(c,v){const{U,P,M}=c;P.age=Math.round(U(55,88));P.hr=U(60,95);M.morph='lbbb';M.PR=U(.15,.2);M.sgCheck=true;
   const iv={sg_lat:[.85,-.35,.1],sg_inf:[-.1,1,-.1],sg_v13:[0,.1,-1],smith:[.15,-.05,1]}[v];
-  if(iv){M.lbbbIsch={a:v==='smith'?U(.34,.46):U(.3,.42),v:nrm(iv)};M.sgWant={sg_lat:'c1',sg_inf:'c1',sg_v13:'c2',smith:'smith'}[v];}
+  if(iv){M.lbbbIsch={a:v==='smith'?U(.34,.46):U(.3,.42),v:nrm(iv)};M.sgWant={sg_lat:'c1',sg_inf:'c1',sg_v13:'c2',smith:'smith'}[v];
+    M.mi={sg_lat:{walls:['lateral','hochlateral'],vessel:'RCX',alt:'D1'},sg_inf:{walls:['inferior'],vessel:'RCA',alt:'RCX'},sg_v13:{walls:['posterior'],vessel:'RCX',alt:'RCA'},smith:{walls:['anterior','septal'],vessel:'LAD'}}[v];M.mi.stage='akut';M.mi.lbbb=true;}
   c.dev.push('Linksschenkelblock');c.verdict='Abnormales EKG';
   c.teach.push('<b>Kompletter LSB</b>: QRS ≥ 120 ms, breites gekerbtes R in I/aVL/V5/V6, tiefes S in V1, diskordante ST-T (ST-Hebung V1–V3 ist hier normal).',
     {plain:'Keine Ischämiezeichen: alle ST-Veränderungen sind diskordant und proportional (Smith-Quotient < 0,25). Neuer LSB + Brustschmerz trotzdem ernst nehmen.',
@@ -120,10 +121,19 @@ lsb:{g:'Erregungsleitung',n:'Linksschenkelblock',v:{plain:'LSB (bekannt, keine I
      sg_v13:'Posteriorer Infarkt: ST-Senkung in V1–V3, wo der QRS negativ ist – konkordant.',
      smith:'Vorderwandinfarkt: ST-Hebung V1–V3 ist zwar diskordant, aber unverhältnismäßig groß (ST/S ≥ 0,25 = Smith-modifizierte Sgarbossa-Kriterien).'}[v]);}},
 rsb:{g:'Erregungsleitung',n:'Rechtsschenkelblock',v:{rsb:'RSB',bifasz:'Bifaszikulär (RSB + LAHB)',trifasz:'RSB + LAHB + AV-Block I°'},setup(c,v){const{U,P,M}=c;P.age=Math.round(U(40,88));P.hr=U(58,95);M.morph='rbbb';
-  if(v!=='rsb'){P.rotFr=U(-82,-70);}if(v==='trifasz')M.PR=U(.22,.28);
+  if(v!=='rsb'){P.rotFr=U(-82,-70);}M.fasc=v==='rsb'?{rbb:1}:{rbb:1,laf:1};if(v==='trifasz')M.PR=U(.22,.28);
   c.dev.push('Rechtsschenkelblock');if(v!=='rsb')c.dev.push('Linksanteriorer Hemiblock');if(v==='trifasz')c.dev.push('AV-Block I°');c.verdict='Abnormales EKG';
   c.teach.push('<b>Kompletter RSB</b>: QRS ≥ 120 ms, rSR′ („M“) in V1/V2, breites S in I und V6, sekundäre T-Negativierung V1–V3.',
     v!=='rsb'?'Zusätzlich überdrehter Linkstyp (LAHB) → bifaszikulärer Block'+(v==='trifasz'?' mit AV-Block I° („trifaszikulär“) – Synkopenrisiko durch AV-Block III°.':'.'):'');}},
+hemi:{g:'Erregungsleitung',n:'Faszikelblöcke (Hemiblock)',v:{lahb:'Linksanteriorer Hemiblock (LAHB)',lphb:'Linksposteriorer Hemiblock (LPHB)',bifasz_lp:'Bifaszikulär (RSB + LPHB)'},setup(c,v){const{U,P,M}=c;P.age=Math.round(U(45,88));P.hr=U(58,92);
+  if(v==='lahb'){P.rotFr=U(-82,-52);M.fasc={laf:1};c.dev.push('Überdrehter Linkstyp','V. a. linksanterioren Hemiblock');}
+  else{P.rotFr=U(108,135);M.fasc={lpf:1};if(v==='bifasz_lp'){M.morph='rbbb';M.fasc.rbb=1;c.dev.push('Rechtsschenkelblock');}c.dev.push('Überdrehter Rechtstyp','V. a. linksposterioren Hemiblock');}
+  c.verdict='Abnormales EKG';
+  c.teach.push(v==='lahb'?'<b>Linksanteriorer Hemiblock</b>: Achse zwischen −45° und −90°, qR in aVL, rS in II, III, aVF (S in III tiefer als in II), QRS < 120 ms.':
+    '<b>Linksposteriorer Hemiblock</b>: Achse zwischen +90° und +180°, rS in I und aVL, qR in III und aVF, QRS < 120 ms.'+(v==='bifasz_lp'?' Zusammen mit dem RSB bifaszikulär: nur noch der linksanteriore Faszikel leitet.':''),
+    v==='lahb'?'Der vordere Faszikel des linken Schenkels leitet nicht: die vorderen-oberen Anteile der linken Kammer werden zuletzt über den hinteren Faszikel erregt – der Summenvektor zeigt am Ende nach links oben.':
+    'Der hintere Faszikel leitet nicht: die unteren-hinteren Anteile der linken Kammer werden zuletzt erregt – der Vektor zeigt nach rechts unten. Erst andere Ursachen eines Rechtstyps ausschließen (Rechtsherzbelastung, schlanker junger Mensch, Lateralinfarkt).',
+    v==='bifasz_lp'?'Hohes Risiko für einen kompletten AV-Block (Synkopen).':'');}},
 wpw:{g:'Erregungsleitung',n:'WPW / Präexzitation',v:{muster:'WPW-Muster im Sinusrhythmus',fbi:'Vorhofflimmern bei WPW (FBI-Tachykardie)',avrt:'Orthodrome AVRT (schmal)'},setup(c,v){const{U,P,M,pick}=c;P.age=Math.round(U(14,50));
   const dv=nrm(pick([[-.2,.5,.8],[.6,.6,.3],[.3,-.4,.8]]));
   if(v==='muster'){P.hr=U(60,95);M.delta={a:U(.4,.6),v:dv};M.PR=U(.115,.135);c.dev.push('Kurze PQ-Zeit mit Delta-Welle – V. a. Präexzitation (WPW)');c.verdict='Abnormales EKG';}
@@ -215,11 +225,13 @@ stemi_vw:{g:'Ischämie / Infarkt',n:'STEMI Vorderwand',v:{prox:'Proximale LAD �
   const prox=v==='prox'||(v!=='mid'&&v!=='wrap'&&chance(.55));
   const inj=v==='wrap'?nrm([U(.15,.3),U(.4,.6),.85]):prox?nrm([U(.25,.4),U(-.5,-.3),.85]):nrm([U(.2,.35),U(.05,.2),.95]);
   const stage=['hyper','fort','alt'].includes(v)?v:'akut';stemi(c,inj,stage,Q_VW);
+  M.mi={walls:v==='wrap'?['anterior','apikal','inferior']:prox?['septal','anterior','hochlateral']:['anterior','apikal'],vessel:'LAD',site:v==='wrap'?'distal (umgreift die Herzspitze)':prox?'proximal':'Mitte',stage};
   c.teach.push(`<b>Vorderwand-Infarkt (${v==='wrap'?'Wraparound-LAD':prox?'proximale LAD':'mittlere LAD'})</b>: ST-Hebung V1–V4${v==='wrap'?' und zusätzlich II/III/aVF (LAD umgreift die Herzspitze)':prox?', zusätzlich I und aVL, Spiegelbild in II/III/aVF':''}.`,stageTeach(stage),'Gefahr: Kammerflimmern, kardiogener Schock.');}},
 stemi_inf:{g:'Ischämie / Infarkt',n:'STEMI Hinterwand (inferior)',v:{rca:'RCA – akut',rcx:'RCX – akut',rv:'RCA mit RV-Beteiligung',post:'Inferoposterior',av3:'Mit AV-Block III°',hyper:STAGE.hyper,fort:STAGE.fort,alt:STAGE.alt},setup(c,v){const{U,chance,P,M}=c;P.age=Math.round(U(42,86));P.hr=U(46,74);P.rotFr=U(-20,25);
   const rcx=v==='rcx'||(['hyper','fort','alt'].includes(v)&&chance(.3));
   const inj=v==='rv'?nrm([U(-.55,-.4),.85,U(.2,.35)]):v==='post'?nrm([U(-.2,.1),.8,U(-.75,-.55)]):rcx?nrm([U(.25,.5),1,U(-.7,-.35)]):nrm([U(-.38,-.15),1,U(-.45,-.05)]);
   const stage=['hyper','fort','alt'].includes(v)?v:'akut';stemi(c,inj,stage,Q_INF);
+  M.mi={walls:v==='rv'?['inferior','rv']:v==='post'?['inferior','posterior']:rcx?['inferior','lateral','posterior']:['inferior'],vessel:rcx?'RCX':'RCA',site:v==='rv'?'proximal':'',stage};
   if(v==='av3'){M.rh={type:'av3',esc:U(36,48),escKind:'normal',under:'sinus'};P.hr=U(70,95);c.dev.push('AV-Block III° mit junktionalem Ersatzrhythmus');}
   else if(stage!=='alt'&&chance(.25)){M.PR=U(.21,.27);c.dev.push('AV-Block I°');}
   if(chance(.2)&&v!=='av3')M.pvc={first:U(2,7),gap:[6,18]};
@@ -229,15 +241,16 @@ stemi_inf:{g:'Ischämie / Infarkt',n:'STEMI Hinterwand (inferior)',v:{rca:'RCA �
 stemi_lat:{g:'Ischämie / Infarkt',n:'STEMI Lateralwand',v:{akut:'Lateral – akut',hoch:'Hoch-lateral (I, aVL)',hyper:STAGE.hyper,alt:STAGE.alt},setup(c,v){const{U,P,M}=c;P.age=Math.round(U(42,86));P.hr=U(62,105);
   const inj=v==='hoch'?nrm([U(.25,.4),U(-1,-.9),U(-.2,0)]):nrm([U(.75,.9),U(-.55,-.35),U(-.25,0)]);
   const stage=['hyper','alt'].includes(v)?v:'akut';stemi(c,inj,stage,Q_LAT);
+  M.mi={walls:v==='hoch'?['hochlateral']:['lateral','hochlateral'],vessel:v==='hoch'?'D1':'RCX',alt:v==='hoch'?'RCX':'D1',stage};
   c.teach.push(v==='hoch'?'<b>Hoch-lateraler STEMI</b> (Diagonalast/RCX): ST-Hebung nur in I und aVL, deutliches Spiegelbild in III/aVF.':'<b>Lateraler Infarkt</b> (RCX oder Diagonalast): ST-Hebung I, aVL, V5, V6 mit Spiegelbild in III/aVF.',
     stageTeach(stage),'Laterale Hebungen sind oft klein (1 mm) – das Spiegelbild in III ist häufig auffälliger als die Hebung selbst.');}},
 stemi_post:{g:'Ischämie / Infarkt',n:'Posteriorer Infarkt',setup(c){const{U,P,M}=c;P.age=Math.round(U(42,86));P.hr=U(62,100);
   M.st.push({a:U(.18,.3),v:nrm([.1,.15,-1])});M.qAdd.push({t:.042,s:.013,a:U(.6,.85),v:[0,0,1]});M.tExtra.push({a:U(.15,.25),v:[0,0,1]});
   M.stAuto=true;c.verdict='Abnormales EKG – Ischämie möglich';
-  c.teach.push('<b>Isolierter posteriorer Infarkt</b> (STEMI-Äquivalent!): horizontale ST-Senkung V1–V3, hohe R-Zacken V2 (R/S > 1), aufrechte T-Wellen.','Beweis: ST-Hebung in V7–V9. Wird von Geräten oft nur als „Ischämie“ erkannt.');}},
+  M.mi={walls:['posterior'],vessel:'RCX',alt:'RCA',stage:'akut'};c.teach.push('<b>Isolierter posteriorer Infarkt</b> (STEMI-Äquivalent!): horizontale ST-Senkung V1–V3, hohe R-Zacken V2 (R/S > 1), aufrechte T-Wellen.','Beweis: ST-Hebung in V7–V9. Wird von Geräten oft nur als „Ischämie“ erkannt.');}},
 hauptstamm:{g:'Ischämie / Infarkt',n:'ST-Hebung aVR / Hauptstamm',setup(c){const{U,P,M}=c;P.age=Math.round(U(48,88));P.hr=U(95,128);
   M.st.push({a:U(.2,.32),v:nrm([-.6,-.55,-.3])});M.tAmp*=.7;M.stAuto=true;c.verdict='Abnormales EKG – Ischämie, Hauptstamm möglich';
-  c.teach.push('<b>Diffuse ST-Senkung ≥ 6 Ableitungen + ST-Hebung aVR (≥ V1)</b>: Hauptstamm- oder Mehrgefäßischämie, schwere subendokardiale Ischämie.','Hohe Letalität – Katheterzentrum, Schockgefahr.');}},
+  M.mi={walls:['diffus'],vessel:'LM',stage:'akut'};c.teach.push('<b>Diffuse ST-Senkung ≥ 6 Ableitungen + ST-Hebung aVR (≥ V1)</b>: Hauptstamm- oder Mehrgefäßischämie, schwere subendokardiale Ischämie.','Hohe Letalität – Katheterzentrum, Schockgefahr.');}},
 nste:{g:'Ischämie / Infarkt',n:'NSTE-ACS',v:{lat:'ST-Senkung lateral',diffus:'Diffuse ST-Senkung',tneg:'Nur T-Negativierung'},setup(c,v){const{U,P,M}=c;P.age=Math.round(U(48,88));P.hr=U(72,110);
   if(v==='lat')M.st.push({a:U(.08,.17),v:nrm([-.75,-.25,-.35])});else if(v==='diffus')M.st.push({a:U(.1,.18),v:nrm([-.6,-.45,-.45])});
   if(v==='tneg')M.tExtra.push({a:U(.3,.45),v:nrm([-.8,-.25,-.3]),sym:true});else if(c.chance(.5))M.tExtra.push({a:U(.08,.15),v:nrm([-.8,-.2,-.2])});
@@ -247,11 +260,11 @@ wellens:{g:'Ischämie / Infarkt',n:'Wellens-Syndrom',v:{B:'Typ B (tief negative 
   if(v==='A')M.tExtra.push({a:U(.12,.2),v:nrm([.1,.1,1]),dt:-.06,sym:true},{a:U(.3,.45),v:nrm([.1,.1,-1]),dt:.05,sym:true});
   else M.tExtra.push({a:U(.45,.7),v:nrm([.05,.15,-1]),sym:true});
   M.st.push({a:U(0,.04),v:[0,0,1]});c.dev.push(v==='A'?'Biphasische T-Wellen V2/V3':'T-Negativierung V2–V4');c.verdict='Abnormales EKG – Ischämie möglich';
-  c.teach.push(`<b>Wellens-Syndrom Typ ${v}</b>: ${v==='A'?'biphasische T-Wellen (erst positiv, dann negativ) V2/V3':'tiefe, symmetrische T-Negativierung V2–V4'}, erhaltene R-Progression, keine/minimale ST-Hebung.`,'Hinweis auf kritische proximale LAD-Stenose, Patient oft schmerzfrei – hohes Infarktrisiko.');}},
+  M.mi={walls:['anterior','septal'],vessel:'LAD',site:'proximal',stage:'stenose'};c.teach.push(`<b>Wellens-Syndrom Typ ${v}</b>: ${v==='A'?'biphasische T-Wellen (erst positiv, dann negativ) V2/V3':'tiefe, symmetrische T-Negativierung V2–V4'}, erhaltene R-Progression, keine/minimale ST-Hebung.`,'Hinweis auf kritische proximale LAD-Stenose, Patient oft schmerzfrei – hohes Infarktrisiko.');}},
 dewinter:{g:'Ischämie / Infarkt',n:'De-Winter-Muster',setup(c){const{U,P,M}=c;P.age=Math.round(U(40,80));P.sex='m';P.hr=U(70,105);
   M.stDip={a:U(.22,.32),v:nrm([-.4,-.2,-.85])};M.tExtra.push({a:U(.45,.7),v:nrm([.2,.2,1]),sym:true,sF:.75});
   M.stAuto=true;c.verdict='Abnormales EKG – Ischämie möglich';
-  c.teach.push('<b>De-Winter-Muster</b> (STEMI-Äquivalent, proximale LAD): aszendierende ST-Senkung am J-Punkt V1–V6 mit hohen, spitzen T-Wellen, oft leichte ST-Hebung aVR.','Kein klassischer STEMI – wird leicht übersehen.');}},
+  M.mi={walls:['anterior','septal'],vessel:'LAD',site:'proximal',stage:'akut'};c.teach.push('<b>De-Winter-Muster</b> (STEMI-Äquivalent, proximale LAD): aszendierende ST-Senkung am J-Punkt V1–V6 mit hohen, spitzen T-Wellen, oft leichte ST-Hebung aVR.','Kein klassischer STEMI – wird leicht übersehen.');}},
 aivr:{g:'Ischämie / Infarkt',n:'AIVR (Reperfusion)',setup(c){const{U,P,M}=c;P.age=Math.round(U(45,85));P.hr=U(55,72);M.rh={type:'vt',hr:U(62,100),dissoc:true};M.vtV=nrm(c.pick(VENT_ORIGINS));
   c.dev.push('Akzelerierter idioventrikulärer Rhythmus');c.verdict='Abnormales EKG';
   c.teach.push('<b>AIVR</b>: regelmäßige breite Kammerkomplexe 50–110/min, P-Wellen dissoziiert – typisch kurz nach Reperfusion (Lyse/PCI).','Meist hämodynamisch stabil und selbstlimitierend – nicht wie eine VT behandeln.');}},
@@ -619,9 +632,9 @@ function generateECG(caseId, seed, opt){
   dev.push(c.verdict);
   meta.device=dev;meta.teach=c.teach.filter(Boolean);
   meta.noise={wander:+noise.wander.toFixed(3),tremor:+noise.tremor.toFixed(3),badElectrode:noise.bad>=0?['RA','LA','LL','V1','V2','V3','V4','V5','V6'][noise.bad]:null,mains:noise.mains>0,shiver:noise.shiver>0};
-  meta.rhythm=rh.type;
+  meta.rhythm=rh.type;meta.mi=M.mi?Object.assign({},M.mi):null;
   meta.model={rhythm:rh.type,av:rh.av||null,ratio:rh.ratio||null,mode:rh.mode||null,under:rh.under||null,morph:mainKind,delta:M.delta?M.delta.v:null,pr:M.PR,d:mD,
-    aRate:rh.aRate||null,pvcV:M.pvcV,vtV:M.vtV,escV:M.escV,escKind:rh.escKind||null,tdp:!!M.tdp,retroP:!!M.retroP};
+    aRate:rh.aRate||null,fasc:Object.assign({},M.fasc||{},mainKind==='lbbb'?{lbb:1}:{},mainKind==='rbbb'?{rbb:1}:{}),pvcV:M.pvcV,vtV:M.vtV,escV:M.escV,escKind:rh.escKind||null,tdp:!!M.tdp,retroP:!!M.retroP};
   const inW=e=>e.t>=-.4&&e.t<dur;
   const out={fs,dur,leads,qrs:qEv.filter(q=>q.t>=0&&q.t<dur).map(q=>({t:+q.t.toFixed(3),kind:q.kind})),p:pEv.filter(p=>p.t>=0&&p.t<dur).map(p=>+p.t.toFixed(3)),spikes:sEv.filter(t=>t>=0&&t<dur).map(t=>+t.toFixed(3)),
     atria:pEv.filter(inW).map(p=>({t:+p.t.toFixed(3),q:p.q!=null?+p.q.toFixed(3):null,blk:p.blk||null})),meta};

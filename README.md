@@ -1,13 +1,13 @@
 # EKG-Trainer
 
-Übungswerkzeug für das 12-Kanal-EKG: synthetische, aber an echten Daten kalibrierte EKGs, Host-Modus für Gruppen, Beamer-Ansicht, Zeichnen und Messen, Erregungsleitung als 2D-Schema.
+Übungswerkzeug für das 12-Kanal-EKG: synthetische, aber an echten Daten kalibrierte EKGs, Host-Modus für Gruppen, Beamer-Ansicht, Zeichnen und Messen, Erregungsleitung als 2D-Schema (mit Faszikeln und Hemiblöcken), Infarkt-Lokalisation, EKG-Lineal.
 **Nur für Schulungszwecke – keine echten Patientendaten, nicht für die Diagnostik.**
 
 ## Aufbau
 | Ordner | Inhalt |
 |---|---|
 | `engine/` | `ekg-engine.js` (Generator, 42 Befunde / 121 Varianten) und `ekg-lib.js` (Formbibliothek aus PTB-XL+) |
-| `web/` | Oberfläche: `host.html` (Steuerpult), `beamer.html`, `index.html` (Teilnehmer), `viewer.js`, `heart2d.js`, `common.js` |
+| `web/` | Oberfläche: `host.html` (Steuerpult), `beamer.html`, `index.html` (Teilnehmer), `viewer.js`, `heart2d.js` (Erregungsleitung), `loc2d.js` (Infarkt-Lokalisation), `common.js` |
 | `server/` | Lokaler Server (Rust). Die Dateien aus `web/` sind eingebaut → eine einzige Programmdatei |
 | `online/` | Online-Räume (Cloudflare Worker + Durable Object), gleiche Nachrichten wie der lokale Server |
 | `tools/kalibrierung/` | Anpassung an PTB-XL+ und die Vergleichstests |

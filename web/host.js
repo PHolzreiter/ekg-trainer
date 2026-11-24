@@ -3,21 +3,22 @@
 const {generateECG,LEADS,CASES}=LeitWerkECG,C=EKGCommon,$=id=>document.getElementById(id);
 const ids=Object.keys(CASES);
 const st={case:'normal',variant:'',seed:1042,clean:false,showValues:true,view:'paper',lead:'II',gain:1,filter:'mon'};
-let ecg=null,liveG=null,liveKey='',sentKey=null,revealed=false,explain=false,heart=null,peers=[];
+let ecg=null,liveG=null,liveKey='',sentKey=null,revealed=false,explain=false,heart=null,loc=null,xtab='erreg',peers=[];
 const nets=[];const bc=('BroadcastChannel' in window)?new BroadcastChannel('ekg-trainer'):null;
 const paper=new EKGView.EcgPaper($('paper'),{onInk:inkChanged,onView:viewChanged,onLayout:layoutChanged,empty:''});
-const monitor=new EKGView.EcgMonitor($('mon'));
+const monitor=new EKGView.EcgMonitor($('mon')),monitor2=new EKGView.EcgMonitor($('mon2'));
 /* Auswahl */
 const sel=$('caseSel'),vsel=$('varSel');const groups={};ids.forEach(id=>(groups[CASES[id].group]=groups[CASES[id].group]||[]).push(id));
 for(const g in groups){const og=document.createElement('optgroup');og.label=g;for(const id of groups[g]){const o=new Option(CASES[id].name,id);og.appendChild(o);}sel.appendChild(og);}
-for(const id of ['leadSel','xLead'])LEADS.forEach(L=>$(id).appendChild(new Option(L,L,false,L==='II')));
+for(const id of ['leadSel','xLead','monLead'])LEADS.forEach(L=>$(id).appendChild(new Option(L,L,false,L==='II')));
 function fillVar(){vsel.innerHTML='';const v=CASES[st.case].variants;vsel.disabled=!v;vsel.appendChild(new Option(v?'Variante: zufällig':'Keine Varianten',''));if(v)for(const k in v)vsel.appendChild(new Option(v[k],k));st.variant='';}
 const key=()=>JSON.stringify([st.case,st.variant,st.seed,st.clean,st.showValues,st.view,st.lead,st.filter]);
 function spec(){return Object.assign({},st,{variant:ecg.meta.variant||''});}
 function gen(){ecg=generateECG(st.case,st.seed,{variant:st.variant||undefined,clean:st.clean,vector:true});
-  paper.setRecord(C.makeRecord(ecg,st));if(st.view==='live')ensureLive();renderSol();pill();if(explain&&heart){heart.setECG(ecg);}
+  paper.setRecord(C.makeRecord(ecg,st));if(st.view==='live')ensureLive();renderSol();pill();if(explain&&heart){heart.setECG(ecg);}if(loc){loc.select(null);loc.setECG(ecg);}pushMarks();updMon(false);
   if(revealed&&sentKey!==key()){/* neue Vorschau: Auflösung gilt nur für das Gesendete */}}
-function ensureLive(){const k=JSON.stringify([st.case,st.variant,st.seed,st.clean]);if(liveKey!==k){liveG=generateECG(st.case,st.seed,{variant:ecg.meta.variant||undefined,clean:st.clean,dur:64});liveKey=k;}
+function getLiveG(){const k=JSON.stringify([st.case,st.variant,st.seed,st.clean]);if(liveKey!==k){liveG=generateECG(st.case,st.seed,{variant:ecg.meta.variant||undefined,clean:st.clean,dur:64});liveKey=k;}return liveG;}
+function ensureLive(){getLiveG();
   monitor.gain=st.gain;monitor.setData(C.liveLoop(liveG,st.lead,st.filter));monitor.setInfo(`x${String(st.gain).replace('.',',')} · Monitorfilter 0,5–40 Hz`);}
 function pill(){const p=$('pill'),live=sentKey===key();p.textContent=sentKey==null?'Vorschau – noch nichts gesendet':live?'Gesendet – alle sehen dieses EKG':'Vorschau – Gruppe sieht noch das vorige EKG';p.className='pill '+(live?'live':'prev');}
 function renderSol(){const m=ecg.meta;let h=`<p style="margin:0 0 6px"><b>${m.caseName}</b>${m.variantName?' – '+m.variantName:''}</p><p style="margin:0 0 6px">${m.teach.join('<br>')}</p><p class="muted" style="margin:0 0 4px">Gerätebefund: ${m.device.join(' · ')}</p>`;
@@ -32,12 +33,20 @@ function send(){sentKey=key();revealed=false;$('btnReveal').classList.remove('on
   const rec=C.makeRecord(ecg,st);const msg={t:'ecg',k:'ecg',view:st.view,rec:C.pack(rec),live:null,gain:st.gain};
   if(st.view==='live'){ensureLive();msg.live=C.packLive(monitor.data);}
   toAll(msg);toAll({t:'reveal',k:'reveal',data:null});toAll({t:'ink',k:'ink',ink:[],cals:[],ruler:null});toAll({t:'layout',k:'layout',l:paper.layout,page:paper.page});
-  toBeamer({t:'show',spec:spec()});toBeamer({t:'reveal',data:null});toBeamer({t:'explain',on:explain,lead:$('xLead').value});toBeamer({t:'layout',l:paper.layout,page:paper.page});pill();}
+  toBeamer({t:'show',spec:spec()});toBeamer({t:'reveal',data:null});beamerExplain();toBeamer({t:'layout',l:paper.layout,page:paper.page});lastSpec=spec();updMon(true);pushMarks();pill();}
+function beamerExplain(){toBeamer({t:'explain',on:explain,lead:$('xLead').value,tab:xtab,sel:loc?loc.sel:null,labels:$('xLbl').checked});}
+/* Monitor-Ableitung unter dem Papier (Host-Vorschau, Teilnehmer, Beamer) */
+function updMon(net){const on=$('chkMon').checked,L=$('monLead').value;$('monRow').classList.toggle('hidden',!on);$('mon2').classList.toggle('hidden',!on);
+  let d=null;if(on&&ecg){d=C.liveLoop(getLiveG(),L,'mon');monitor2.gain=st.gain;monitor2.setData(d);monitor2.setInfo('Monitor · '+L);}
+  if(net!==false&&sentKey===key()){toAll(on&&d?{t:'mon',k:'mon',on:true,live:C.packLive(d),gain:st.gain}:{t:'mon',k:'mon',on:false});toBeamer({t:'mon',on,lead:L});}}
+/* Rahmen um Ableitungen (Infarkt-Lokalisation) */
+function pushMarks(){const m=(explain&&xtab==='loc'&&loc&&$('xMarks').checked)?loc.marks():null;paper.setMarks(m);if(sentKey===key()){toAll({t:'marks',k:'marks',marks:m});toBeamer({t:'marks',marks:m});}}
 function inkChanged(d){if(sentKey!==key())return;toBeamer({t:'ink',ink:d.ink,cals:d.cals,ruler:d.ruler});if($('chkInk').checked)toAll({t:'ink',k:'ink',ink:d.ink,cals:d.cals,ruler:d.ruler});}
 function layoutChanged(o){if(sentKey!==key())return;toBeamer({t:'layout',l:o.l,page:o.page});toAll({t:'layout',k:'layout',l:o.l,page:o.page});}
 function viewChanged(v){if($('chkZoom').checked&&sentKey===key())toBeamer({t:'view',v});}
-if(bc)bc.onmessage=e=>{if(e.data&&e.data.t==='hello'&&sentKey){const s=JSON.parse(sentKey);toBeamer({t:'show',spec:lastSpec});toBeamer({t:'reveal',data:revealMsg()});const d=paper.getInk();toBeamer({t:'ink',ink:d.ink,cals:d.cals,ruler:d.ruler});toBeamer({t:'explain',on:explain,lead:$('xLead').value});toBeamer({t:'layout',l:paper.layout,page:paper.page});}};
-let lastSpec=null;const _send=send;send=function(){_send();lastSpec=spec();};
+if(bc)bc.onmessage=e=>{if(e.data&&e.data.t==='hello'&&sentKey){toBeamer({t:'show',spec:lastSpec});toBeamer({t:'reveal',data:revealMsg()});const d=paper.getInk();toBeamer({t:'ink',ink:d.ink,cals:d.cals,ruler:d.ruler});beamerExplain();toBeamer({t:'layout',l:paper.layout,page:paper.page});
+  toBeamer({t:'mon',on:$('chkMon').checked,lead:$('monLead').value});pushMarks();if($('chkZoom').checked)toBeamer({t:'view',v:paper.getView()});}};
+let lastSpec=null;const _send=send;
 /* Bedienung */
 sel.onchange=()=>{st.case=sel.value;fillVar();gen();};vsel.onchange=()=>{st.variant=vsel.value;gen();};
 $('btnNew').onclick=()=>{st.seed=Math.floor(Math.random()*1e6);gen();};
@@ -49,19 +58,25 @@ $('leadSel').onchange=e=>{st.lead=e.target.value;ensureLive();pill();};$('gainSe
 $('btnBeep').onclick=e=>{monitor.beepOn=!monitor.beepOn;e.target.textContent=monitor.beepOn?'Ton an':'Ton aus';if(monitor.beepOn)monitor.beep();};
 $('btnSend').onclick=()=>send();
 $('btnReveal').onclick=()=>{if(sentKey!==key()){send();}revealed=!revealed;$('btnReveal').classList.toggle('on',revealed);const r=revealMsg();paper.setReveal(r?[r.title].concat(r.device):null);toAll({t:'reveal',k:'reveal',data:r});toBeamer({t:'reveal',data:r});};
+$('chkMon').onchange=()=>updMon();$('monLead').onchange=()=>updMon();
+$('chkZoom').onchange=e=>{if(sentKey===key())toBeamer({t:'view',v:e.target.checked?paper.getView():{fit:true}});};
 $('chkInk').onchange=e=>{const d=e.target.checked?paper.getInk():{ink:[],cals:[],ruler:null};toAll({t:'ink',k:'ink',ink:d.ink,cals:d.cals,ruler:d.ruler});};
 /* Erregungsleitung */
 let xt=0,xPlay=true,xLast=null,layBefore=null;
 function setExplain(on){explain=on;$('explain').classList.toggle('hidden',!on);$('btnExplain').classList.toggle('on',on);
-  if(on){if(st.view!=='paper')document.querySelector('[data-view=paper]').click();if(!heart)heart=new Heart2D($('h3d'));heart.setLead($('xLead').value);heart.setECG(ecg);if(paper.layout!=='6x2'){layBefore=paper.layout;paper.setLayout('6x2',xt>=5?1:0,true);}}else{paper.setCursor(null);if(layBefore){paper.setLayout(layBefore,0,true);layBefore=null;}}
-  toBeamer({t:'explain',on,lead:$('xLead').value});}
+  if(on){if(st.view!=='paper')document.querySelector('[data-view=paper]').click();setTab(xtab);if(paper.layout!=='6x2'){layBefore=paper.layout;paper.setLayout('6x2',xt>=5?1:0,true);}}else{paper.setCursor(null);if(layBefore){paper.setLayout(layBefore,0,true);layBefore=null;}}
+  pushMarks();beamerExplain();}
+function setTab(x){xtab=x;document.querySelectorAll('.xtab').forEach(b=>b.classList.toggle('on',b.dataset.x===x));const er=x==='erreg';$('h3d').classList.toggle('hidden',!er);$('xbarE').classList.toggle('hidden',!er);$('locw').classList.toggle('hidden',er);$('xbarL').classList.toggle('hidden',er);
+  if(er){if(!heart)heart=new Heart2D($('h3d'));heart.setLead($('xLead').value);heart.setOptions({labels:$('xLbl').checked});heart.setECG(ecg);}else{paper.setCursor(null);if(!loc){loc=new LocView($('locw'),{onSelect:()=>{pushMarks();beamerExplain();}});}loc.setECG(ecg);}
+  pushMarks();beamerExplain();}
+document.querySelectorAll('.xtab').forEach(b=>b.onclick=()=>setTab(b.dataset.x));$('xMarks').onchange=()=>pushMarks();
 $('btnExplain').onclick=()=>setExplain(!explain);
 $('xPlay').onclick=e=>{xPlay=!xPlay;e.target.textContent=xPlay?'Pause':'Weiter';};
 const jump=dir=>{const q=ecg.qrs.map(x=>x.t-.3).filter(t=>t>0);let t;if(dir>0)t=q.find(x=>x>xt+.05);else t=q.filter(x=>x<xt-.35).pop();xt=t==null?(dir>0?0:Math.max(0,q[q.length-1]||0)):t;};
 $('xPrev').onclick=()=>jump(-1);$('xNext').onclick=()=>jump(1);
-$('xLead').onchange=e=>{if(heart)heart.setLead(e.target.value);toBeamer({t:'explain',on:explain,lead:e.target.value});};
-const xopt=()=>{const o={vector:$('xVec').checked,axis:$('xAxis').checked};if(heart)heart.setOptions(o);toBeamer({t:'xopt',o});};$('xVec').onchange=xopt;$('xAxis').onchange=xopt;
-function tick(ts){requestAnimationFrame(tick);if(!explain||!heart||!ecg){xLast=null;return;}if(xLast==null)xLast=ts;const dt=Math.min(.1,(ts-xLast)/1000);xLast=ts;
+$('xLead').onchange=e=>{if(heart)heart.setLead(e.target.value);beamerExplain();};
+const xopt=()=>{const o={vector:$('xVec').checked,axis:$('xAxis').checked,labels:$('xLbl').checked};if(heart)heart.setOptions(o);toBeamer({t:'xopt',o});};$('xVec').onchange=xopt;$('xAxis').onchange=xopt;$('xLbl').onchange=xopt;
+function tick(ts){requestAnimationFrame(tick);if(!explain||xtab!=='erreg'||!heart||!ecg){xLast=null;return;}if(xLast==null)xLast=ts;const dt=Math.min(.1,(ts-xLast)/1000);xLast=ts;
   if(xPlay){xt+=dt*+$('xSpeed').value;if(xt>=9.98)xt=0;}heart.setTime(xt);paper.setCursor(xt);if(sentKey===key())toBeamer({t:'time',x:xt});}
 requestAnimationFrame(tick);
 /* Präsentationsansicht und Beamer-Fenster */
@@ -88,8 +103,8 @@ $('btnOnline').onclick=()=>{let u=$('relayUrl').value.trim().replace(/\/+$/,'');
   const abc='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',rnd=n=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>abc[b%abc.length]).join('');const room=rnd(5),k=rnd(20);
   const net=addNet(u.replace(/^http/,'ws')+`/ws?room=${room}&role=host&key=${k}`);online={net,room,url:u+'/?r='+room};
   net.on('status',s=>{$('onlineState').textContent=s==='verbunden'?`Online-Raum ${room} ist offen.`:s==='abgelehnt'?'Der Dienst hat die Verbindung abgelehnt.':'Verbindung zum Online-Dienst: '+s;if(s==='verbunden'){showJoin(online.url,room,'Online-Raum: funktioniert über das Internet.');if(lastSpec)resend();}});};
-function resend(){if(!lastSpec)return;const keep=Object.assign({},st);/* erneut senden, was zuletzt gesendet wurde */const d=paper.getInk();_send();lastSpec=spec();paper.ink=d.ink;paper.cals=d.cals;paper.draw();inkChanged(d);}
+function resend(){if(!lastSpec)return;/* erneut senden, was zuletzt gesendet wurde */const d=paper.getInk();_send();paper.ink=d.ink;paper.cals=d.cals;paper.ruler=d.ruler;paper.draw();inkChanged(d);}
 fetch('api/info').then(r=>r.ok?r.json():null).then(j=>{if(!j||!j.room)return;info=j;$('btnQuit').style.display='';$('btnQuit').onclick=()=>{if(!confirm('EKG-Trainer beenden? Alle Teilnehmer werden getrennt.'))return;fetch('api/quit?key='+j.key,{method:'POST'}).finally(()=>{document.body.innerHTML='<div style="padding:40px;font:18px system-ui">EKG-Trainer wurde beendet. Dieses Fenster kann geschlossen werden.</div>';});};const proto=location.protocol==='https:'?'wss':'ws';addNet(`${proto}://${location.host}/ws?room=${j.room}&role=host&key=${j.key}`);renderPeers();}).catch(()=>{});
 sel.value=st.case;fillVar();gen();
-window.__host={seek:t=>{xt=t;},st,gen,send,paper,monitor,get ecg(){return ecg;},get heart(){return heart;},setExplain,nets};
+window.__host={seek:t=>{xt=t;},st,gen,send,paper,monitor,monitor2,setTab,get loc(){return loc;},get ecg(){return ecg;},get heart(){return heart;},setExplain,nets};
 })();

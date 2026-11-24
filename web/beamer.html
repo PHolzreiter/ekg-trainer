@@ -1,29 +1,39 @@
 <!DOCTYPE html>
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>EKG-Trainer – Beamer</title><link rel="stylesheet" href="app.css">
-<style>body{background:#fff}.stage{flex:1;min-height:0}.wait{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:22px;pointer-events:none}</style></head>
-<body><div class="full">
+<style>body{background:#fff}.stage{flex:1;min-height:0}.wait{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:22px;pointer-events:none}
+.hint{position:fixed;right:10px;bottom:8px;font-size:12px;color:#9aa4b4;opacity:.7}</style></head>
+<body class="beamer"><div class="full">
   <div class="revealbox hidden" id="reveal"></div>
-  <div class="stage"><div class="paper" id="paper"></div><div class="mon hidden" id="mon"></div>
-    <div class="explain hidden" id="explain"><div class="h3d" id="h3d"></div></div></div>
-</div><div class="wait" id="wait">Warte auf das Steuerpult …</div>
+  <div class="stage"><div class="pcol" id="pcol"><div class="paper" id="paper"></div><div class="mon2 hidden" id="mon2"></div></div><div class="mon hidden" id="mon"></div>
+    <div class="explain hidden" id="explain"><div class="h3d" id="h3d"></div><div class="locw hidden" id="locw"></div></div></div>
+</div><div class="wait" id="wait">Warte auf das Steuerpult …</div><div class="hint" id="hint">F = Vollbild</div>
 <script src="ekg-lib.js"></script><script src="ekg-engine.js"></script>
-<script src="common.js"></script><script src="viewer.js"></script><script src="heart2d.js"></script>
+<script src="common.js"></script><script src="viewer.js"></script><script src="heart2d.js"></script><script src="loc2d.js"></script>
 <script>
+/* Beamer: reine Ansicht. Zeigt, was am Steuerpult gesendet, gezeichnet und gemessen wird – ohne eigene Werkzeuge. */
 (function(){const {generateECG}=LeitWerkECG,C=EKGCommon,$=id=>document.getElementById(id);
-const paper=new EKGView.EcgPaper($('paper'),{bg:'#fff',empty:''}),monitor=new EKGView.EcgMonitor($('mon'));let ecg=null,heart=null,spec=null,explain=false;
+const paper=new EKGView.EcgPaper($('paper'),{bg:'#fff',empty:'',toolbar:false}),monitor=new EKGView.EcgMonitor($('mon')),monitor2=new EKGView.EcgMonitor($('mon2'));
+let ecg=null,heart=null,loc=null,spec=null,explain=false,tab='erreg',mon={on:false,lead:'II'},liveG=null;
 const bc=new BroadcastChannel('ekg-trainer');
-function show(s){spec=s;$('wait').classList.add('hidden');ecg=generateECG(s.case,s.seed,{variant:s.variant||undefined,clean:s.clean,vector:true});
-  paper.setRecord(C.makeRecord(ecg,s));const live=s.view==='live';$('paper').classList.toggle('hidden',live);$('mon').classList.toggle('hidden',!live);
-  if(live){const g=generateECG(s.case,s.seed,{variant:s.variant||undefined,clean:s.clean,dur:64});monitor.gain=s.gain;monitor.setData(C.liveLoop(g,s.lead,s.filter));}
-  if(explain&&heart)heart.setECG(ecg);}
-function setExplain(on,lead){explain=on;$('explain').classList.toggle('hidden',!on);if(on){if(!heart)heart=new Heart2D($('h3d'));heart.setLead(lead||'II');if(ecg)heart.setECG(ecg);}else paper.setCursor(null);}
+function show(s){spec=s;$('wait').classList.add('hidden');ecg=generateECG(s.case,s.seed,{variant:s.variant||undefined,clean:s.clean,vector:true});liveG=null;
+  paper.setRecord(C.makeRecord(ecg,s));const live=s.view==='live';$('pcol').classList.toggle('hidden',live);$('mon').classList.toggle('hidden',!live);
+  if(live){monitor.gain=s.gain;monitor.setData(C.liveLoop(getLive(),s.lead,s.filter));}
+  if(heart)heart.setECG(ecg);if(loc)loc.setECG(ecg);setMon(mon);}
+function getLive(){if(!liveG)liveG=generateECG(spec.case,spec.seed,{variant:spec.variant||undefined,clean:spec.clean,dur:64});return liveG;}
+function setMon(m){mon=m;const on=!!(m.on&&spec);$('mon2').classList.toggle('hidden',!on);if(on){monitor2.gain=spec.gain||1;monitor2.setData(C.liveLoop(getLive(),m.lead,'mon'));monitor2.setInfo('Monitor · '+m.lead);}}
+function setExplain(m){explain=m.on;tab=m.tab||'erreg';$('explain').classList.toggle('hidden',!explain);if(!explain){paper.setCursor(null);return;}
+  const er=tab==='erreg';$('h3d').classList.toggle('hidden',!er);$('locw').classList.toggle('hidden',er);
+  if(er){if(!heart)heart=new Heart2D($('h3d'));heart.setLead(m.lead||'II');heart.setOptions({labels:m.labels!==false});if(ecg)heart.setECG(ecg);}
+  else{paper.setCursor(null);if(!loc)loc=new LocView($('locw'));if(ecg&&loc.ecg!==ecg)loc.setECG(ecg);if(loc.sel!==m.sel)loc.select(m.sel||null);}}
 bc.onmessage=e=>{const m=e.data;if(!m)return;
   if(m.t==='show')show(m.spec);else if(m.t==='ink')paper.setRemote({ink:m.ink,cals:m.cals,ruler:m.ruler});else if(m.t==='view')paper.setView(m.v);
   else if(m.t==='reveal'){const r=m.data;$('reveal').classList.toggle('hidden',!r);if(r)$('reveal').textContent=r.title+' — '+r.device.join(' · ');paper.setReveal(null);}
-  else if(m.t==='explain')setExplain(m.on,m.lead);else if(m.t==='layout')paper.setLayout(m.l,m.page);else if(m.t==='xopt'){if(heart)heart.setOptions(m.o);}
-  else if(m.t==='time'){if(explain&&heart){heart.setTime(m.x);paper.setCursor(m.x);}}else if(m.t==='gain'){monitor.gain=m.gain;}};
+  else if(m.t==='explain')setExplain(m);else if(m.t==='layout')paper.setLayout(m.l,m.page);else if(m.t==='xopt'){if(heart)heart.setOptions(m.o);}
+  else if(m.t==='marks')paper.setMarks(m.marks);else if(m.t==='mon')setMon(m);
+  else if(m.t==='time'){if(explain&&tab==='erreg'&&heart){heart.setTime(m.x);paper.setCursor(m.x);}}else if(m.t==='gain'){monitor.gain=m.gain;monitor2.gain=m.gain;}};
 bc.postMessage({t:'hello'});
 document.addEventListener('keydown',e=>{if(e.key==='f'||e.key==='F'){if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>{});}});
+document.addEventListener('fullscreenchange',()=>$('hint').style.display=document.fullscreenElement?'none':'');
 })();
 </script></body></html>

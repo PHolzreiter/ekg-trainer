@@ -88,7 +88,7 @@ $('btnOnline').onclick=()=>{let u=$('relayUrl').value.trim().replace(/\/+$/,'');
   const net=addNet(u.replace(/^http/,'ws')+`/ws?room=${room}&role=host&key=${k}`);online={net,room,url:u+'/?r='+room};
   net.on('status',s=>{$('onlineState').textContent=s==='verbunden'?`Online-Raum ${room} ist offen.`:s==='abgelehnt'?'Der Dienst hat die Verbindung abgelehnt.':'Verbindung zum Online-Dienst: '+s;if(s==='verbunden'){showJoin(online.url,room,'Online-Raum: funktioniert über das Internet.');if(lastSpec)resend();}});};
 function resend(){if(!lastSpec)return;const keep=Object.assign({},st);/* erneut senden, was zuletzt gesendet wurde */const d=paper.getInk();_send();lastSpec=spec();paper.ink=d.ink;paper.cals=d.cals;paper.draw();inkChanged(d);}
-fetch('api/info').then(r=>r.ok?r.json():null).then(j=>{if(!j||!j.room)return;info=j;const proto=location.protocol==='https:'?'wss':'ws';addNet(`${proto}://${location.host}/ws?room=${j.room}&role=host&key=${j.key}`);renderPeers();}).catch(()=>{});
+fetch('api/info').then(r=>r.ok?r.json():null).then(j=>{if(!j||!j.room)return;info=j;$('btnQuit').style.display='';$('btnQuit').onclick=()=>{if(!confirm('EKG-Trainer beenden? Alle Teilnehmer werden getrennt.'))return;fetch('api/quit?key='+j.key,{method:'POST'}).finally(()=>{document.body.innerHTML='<div style="padding:40px;font:18px system-ui">EKG-Trainer wurde beendet. Dieses Fenster kann geschlossen werden.</div>';});};const proto=location.protocol==='https:'?'wss':'ws';addNet(`${proto}://${location.host}/ws?room=${j.room}&role=host&key=${j.key}`);renderPeers();}).catch(()=>{});
 sel.value=st.case;fillVar();gen();
 window.__host={seek:t=>{xt=t;},st,gen,send,paper,monitor,get ecg(){return ecg;},get heart(){return heart;},setExplain,nets};
 })();

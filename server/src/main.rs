@@ -102,6 +102,17 @@ async fn info(ConnectInfo(addr): ConnectInfo<SocketAddr>, State(app): State<Arc<
     Json(json!({"room": app.room, "key": app.key, "port": app.port, "urls": lan_urls(app.port)})).into_response()
 }
 
+async fn quit(ConnectInfo(addr): ConnectInfo<SocketAddr>, Query(q): Query<HashMap<String, String>>, State(app): State<Arc<App>>) -> Response {
+    if !addr.ip().is_loopback() || q.get("key") != Some(&app.key) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    tokio::spawn(async {
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        std::process::exit(0);
+    });
+    Json(json!({"ok": true})).into_response()
+}
+
 async fn room(State(app): State<Arc<App>>) -> Response {
     Json(json!({"room": app.room})).into_response()
 }
@@ -263,6 +274,7 @@ async fn main() {
     let router = Router::new()
         .route("/api/info", get(info))
         .route("/api/room", get(room))
+        .route("/api/quit", axum::routing::post(quit))
         .route("/ws", get(ws))
         .fallback(files)
         .with_state(app.clone());

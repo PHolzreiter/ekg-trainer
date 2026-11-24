@@ -18,7 +18,8 @@ function start(){const proto=location.protocol==='https:'?'wss':'ws';const net=n
   $('name').onchange=()=>{try{localStorage.setItem('ekg.name',$('name').value);}catch(e){}hello();};
   net.on('ecg',m=>{const live=m.view==='live'&&m.live;$('paper').classList.toggle('hidden',!!live);$('mon').classList.toggle('hidden',!live);
     paper.setRecord(C.unpack(m.rec));paper.setRemote(null);if(live){monitor.gain=m.gain||1;monitor.setData(C.unpackLive(m.live));}});
-  net.on('ink',m=>paper.setRemote({ink:m.ink,cals:m.cals}));
+  net.on('ink',m=>paper.setRemote({ink:m.ink,cals:m.cals,ruler:m.ruler}));
+  net.on('layout',m=>paper.setLayout(m.l,m.page));
   net.on('reveal',m=>{const r=m.data,b=$('reveal');b.classList.toggle('hidden',!r);if(r){b.innerHTML='';const t=document.createElement('b');t.textContent=r.title;b.appendChild(t);const d=document.createElement('div');d.style.fontSize='12px';d.style.opacity='.9';d.textContent=r.teach.join(' ');b.appendChild(d);}});
   net.on('closed',()=>{$('status').textContent='Der Raum wurde geschlossen.';});}
 if(!room){fetch('api/room').then(r=>r.ok?r.json():null).then(j=>{if(j&&j.room){room=j.room;start();}else ask();}).catch(ask);}else start();

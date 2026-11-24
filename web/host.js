@@ -5,7 +5,7 @@ const ids=Object.keys(CASES);
 const st={case:'normal',variant:'',seed:1042,clean:false,showValues:true,view:'paper',lead:'II',gain:1,filter:'mon'};
 let ecg=null,liveG=null,liveKey='',sentKey=null,revealed=false,explain=false,heart=null,peers=[];
 const nets=[];const bc=('BroadcastChannel' in window)?new BroadcastChannel('ekg-trainer'):null;
-const paper=new EKGView.EcgPaper($('paper'),{onInk:inkChanged,onView:viewChanged,empty:''});
+const paper=new EKGView.EcgPaper($('paper'),{onInk:inkChanged,onView:viewChanged,onLayout:layoutChanged,empty:''});
 const monitor=new EKGView.EcgMonitor($('mon'));
 /* Auswahl */
 const sel=$('caseSel'),vsel=$('varSel');const groups={};ids.forEach(id=>(groups[CASES[id].group]=groups[CASES[id].group]||[]).push(id));
@@ -31,11 +31,12 @@ function toBeamer(o){if(bc)bc.postMessage(o);}
 function send(){sentKey=key();revealed=false;$('btnReveal').classList.remove('on');paper.clearInk();paper.setReveal(null);
   const rec=C.makeRecord(ecg,st);const msg={t:'ecg',k:'ecg',view:st.view,rec:C.pack(rec),live:null,gain:st.gain};
   if(st.view==='live'){ensureLive();msg.live=C.packLive(monitor.data);}
-  toAll(msg);toAll({t:'reveal',k:'reveal',data:null});toAll({t:'ink',k:'ink',ink:[],cals:[]});
-  toBeamer({t:'show',spec:spec()});toBeamer({t:'reveal',data:null});toBeamer({t:'explain',on:explain,lead:$('xLead').value});pill();}
-function inkChanged(d){if(sentKey!==key())return;toBeamer({t:'ink',ink:d.ink,cals:d.cals});if($('chkInk').checked)toAll({t:'ink',k:'ink',ink:d.ink,cals:d.cals});}
+  toAll(msg);toAll({t:'reveal',k:'reveal',data:null});toAll({t:'ink',k:'ink',ink:[],cals:[],ruler:null});toAll({t:'layout',k:'layout',l:paper.layout,page:paper.page});
+  toBeamer({t:'show',spec:spec()});toBeamer({t:'reveal',data:null});toBeamer({t:'explain',on:explain,lead:$('xLead').value});toBeamer({t:'layout',l:paper.layout,page:paper.page});pill();}
+function inkChanged(d){if(sentKey!==key())return;toBeamer({t:'ink',ink:d.ink,cals:d.cals,ruler:d.ruler});if($('chkInk').checked)toAll({t:'ink',k:'ink',ink:d.ink,cals:d.cals,ruler:d.ruler});}
+function layoutChanged(o){if(sentKey!==key())return;toBeamer({t:'layout',l:o.l,page:o.page});toAll({t:'layout',k:'layout',l:o.l,page:o.page});}
 function viewChanged(v){if($('chkZoom').checked&&sentKey===key())toBeamer({t:'view',v});}
-if(bc)bc.onmessage=e=>{if(e.data&&e.data.t==='hello'&&sentKey){const s=JSON.parse(sentKey);toBeamer({t:'show',spec:lastSpec});toBeamer({t:'reveal',data:revealMsg()});const d=paper.getInk();toBeamer({t:'ink',ink:d.ink,cals:d.cals});toBeamer({t:'explain',on:explain,lead:$('xLead').value});}};
+if(bc)bc.onmessage=e=>{if(e.data&&e.data.t==='hello'&&sentKey){const s=JSON.parse(sentKey);toBeamer({t:'show',spec:lastSpec});toBeamer({t:'reveal',data:revealMsg()});const d=paper.getInk();toBeamer({t:'ink',ink:d.ink,cals:d.cals,ruler:d.ruler});toBeamer({t:'explain',on:explain,lead:$('xLead').value});toBeamer({t:'layout',l:paper.layout,page:paper.page});}};
 let lastSpec=null;const _send=send;send=function(){_send();lastSpec=spec();};
 /* Bedienung */
 sel.onchange=()=>{st.case=sel.value;fillVar();gen();};vsel.onchange=()=>{st.variant=vsel.value;gen();};
@@ -48,11 +49,11 @@ $('leadSel').onchange=e=>{st.lead=e.target.value;ensureLive();pill();};$('gainSe
 $('btnBeep').onclick=e=>{monitor.beepOn=!monitor.beepOn;e.target.textContent=monitor.beepOn?'Ton an':'Ton aus';if(monitor.beepOn)monitor.beep();};
 $('btnSend').onclick=()=>send();
 $('btnReveal').onclick=()=>{if(sentKey!==key()){send();}revealed=!revealed;$('btnReveal').classList.toggle('on',revealed);const r=revealMsg();paper.setReveal(r?[r.title].concat(r.device):null);toAll({t:'reveal',k:'reveal',data:r});toBeamer({t:'reveal',data:r});};
-$('chkInk').onchange=e=>{const d=e.target.checked?paper.getInk():{ink:[],cals:[]};toAll({t:'ink',k:'ink',ink:d.ink,cals:d.cals});};
+$('chkInk').onchange=e=>{const d=e.target.checked?paper.getInk():{ink:[],cals:[],ruler:null};toAll({t:'ink',k:'ink',ink:d.ink,cals:d.cals,ruler:d.ruler});};
 /* Erregungsleitung */
-let xt=0,xPlay=true,xLast=null;
+let xt=0,xPlay=true,xLast=null,layBefore=null;
 function setExplain(on){explain=on;$('explain').classList.toggle('hidden',!on);$('btnExplain').classList.toggle('on',on);
-  if(on){if(st.view!=='paper')document.querySelector('[data-view=paper]').click();if(!heart)heart=new Heart3D($('h3d'));heart.setLead($('xLead').value);heart.setECG(ecg);}else paper.setCursor(null);
+  if(on){if(st.view!=='paper')document.querySelector('[data-view=paper]').click();if(!heart)heart=new Heart2D($('h3d'));heart.setLead($('xLead').value);heart.setECG(ecg);if(paper.layout!=='6x2'){layBefore=paper.layout;paper.setLayout('6x2',xt>=5?1:0,true);}}else{paper.setCursor(null);if(layBefore){paper.setLayout(layBefore,0,true);layBefore=null;}}
   toBeamer({t:'explain',on,lead:$('xLead').value});}
 $('btnExplain').onclick=()=>setExplain(!explain);
 $('xPlay').onclick=e=>{xPlay=!xPlay;e.target.textContent=xPlay?'Pause':'Weiter';};
